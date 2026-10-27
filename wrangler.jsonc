@@ -1,6 +1,8 @@
 // Cloudflare Workers configuration for shorttlegacygroup.com (setup steps are in the README).
-// The website is the static files in ./public. The script in worker/ only runs for /api/*,
-// which is where the contact form is sent.
+// The website is the static files in ./public, served directly. Requests that don't match a
+// file go to the script in worker/: it handles the contact form (/api/contact) and hands
+// everything else back to the site, which shows 404.html.
+// Kept compatible with Wrangler 3 and 4, since Workers Builds may use either.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "shorttlegacygroup",
@@ -10,8 +12,7 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*"]
+    "not_found_handling": "404-page"
   },
 
   // Email Routing binding. It can only deliver to addresses verified in Email Routing.

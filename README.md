@@ -90,9 +90,8 @@ The inbox that receives enquiries is kept in a Cloudflare secret (`CONTACT_TO`),
 ## Hosting on Cloudflare Workers
 
 The Cloudflare Worker `shorttlegacygroup` is connected to this repository through Workers Builds. `wrangler.jsonc` holds its settings:
-- serve the files in `public/`
-- show `404.html` for pages that don't exist
-- send only `/api/*` requests to the script
+- serve the files in `public/` directly
+- send requests that don't match a file to `worker/index.js`, which handles the contact form and returns `404.html` for anything else
 
 Every change merged into `main` goes live automatically. Other branches get a preview version, which Cloudflare reports on pull requests.
 
