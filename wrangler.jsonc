@@ -1,0 +1,26 @@
+// Cloudflare Workers configuration for shorttlegacygroup.com (setup steps are in the README).
+// The website is the static files in ./public. The script in worker/ only runs for /api/*,
+// which is where the contact form is sent.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shorttlegacygroup",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // Email Routing binding. It can only deliver to addresses verified in Email Routing.
+  "send_email": [{ "name": "CONTACT_EMAIL" }],
+
+  // CONTACT_TO (the inbox that receives enquiries) is a secret set in the Cloudflare dashboard.
+  "vars": {
+    "CONTACT_FROM": "website@shorttlegacygroup.com"
+  },
+
+  "observability": { "enabled": true }
+}

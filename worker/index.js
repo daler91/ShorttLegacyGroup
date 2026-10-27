@@ -1,10 +1,11 @@
 /**
- * Shortt Legacy Group – contact form endpoint (Cloudflare Worker).
+ * Shortt Legacy Group – site Worker.
  *
- * The website posts its contact form to POST /contact. The Worker checks it
- * and emails it through Cloudflare Email Routing, which is free when sending
- * to a verified destination address. The destination is the CONTACT_TO
- * secret, so it is not stored in this (public) repository.
+ * The website itself is static files in ./public, served by Cloudflare Workers
+ * static assets. This script only handles POST /api/contact: it checks the
+ * contact form and emails it through Cloudflare Email Routing, which is free
+ * when sending to a verified destination address. The destination is the
+ * CONTACT_TO secret, so it is not stored in this (public) repository.
  */
 import { EmailMessage } from "cloudflare:email";
 
@@ -28,42 +29,23 @@ const PHONE_PATTERN = /^[0-9+().\-\s]{6,40}$/;
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const origin = request.headers.get("Origin");
-    const allowedOrigins = (env.ALLOWED_ORIGINS || "")
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-    const cors = corsHeaders(origin, allowedOrigins);
 
-    if (url.pathname !== "/contact") {
-      return reply({ ok: false, error: "not_found" }, 404, cors);
-    }
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          ...cors,
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Accept",
-          "Access-Control-Max-Age": "86400",
-        },
-      });
-    }
-    if (request.method !== "POST") {
-      return reply({ ok: false, error: "method_not_allowed" }, 405, { ...cors, Allow: "POST, OPTIONS" });
-    }
-    if (!origin || !allowedOrigins.includes(origin)) {
-      return reply({ ok: false, error: "forbidden" }, 403, cors);
-    }
+    // Anything that isn't the API goes to the static site (including its 404 page).
+    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (url.pathname !== "/api/contact") return reply({ ok: false, error: "not_found" }, 404);
+    if (request.method !== "POST") return reply({ ok: false, error: "method_not_allowed" }, 405, { Allow: "POST" });
+
+    // Only accept the form from this site's own pages.
+    if (request.headers.get("Origin") !== url.origin) return reply({ ok: false, error: "forbidden" }, 403);
     if (Number(request.headers.get("Content-Length") || 0) > MAX_BODY_BYTES) {
-      return reply({ ok: false, error: "too_large" }, 413, cors);
+      return reply({ ok: false, error: "too_large" }, 413);
     }
 
     let form;
     try {
       form = await request.formData();
     } catch {
-      return reply({ ok: false, error: "bad_request" }, 400, cors);
+      return reply({ ok: false, error: "bad_request" }, 400);
     }
 
     // Spam traps: a hidden field people never see, and a minimum time on the page.
@@ -72,7 +54,7 @@ export default {
     const honeypot = text(form, "hp_field");
     if (honeypot || !(elapsed >= MIN_FILL_MS)) {
       console.log("Dropped likely spam", { honeypot: Boolean(honeypot), elapsed });
-      return reply({ ok: true }, 200, cors);
+      return reply({ ok: true }, 200);
     }
 
     const enquiry = {
@@ -85,13 +67,11 @@ export default {
     if (!SERVICES.includes(enquiry.service)) enquiry.service = SERVICES[0];
 
     const problem = validate(enquiry);
-    if (problem) {
-      return reply({ ok: false, error: "invalid", message: problem }, 400, cors);
-    }
+    if (problem) return reply({ ok: false, error: "invalid", message: problem }, 400);
 
     if (!env.CONTACT_TO || !env.CONTACT_FROM) {
       console.error("Contact form is not configured: set the CONTACT_TO secret and the CONTACT_FROM variable.");
-      return reply({ ok: false, error: "not_configured" }, 500, cors);
+      return reply({ ok: false, error: "not_configured" }, 500);
     }
 
     try {
@@ -99,10 +79,10 @@ export default {
       await env.CONTACT_EMAIL.send(new EmailMessage(env.CONTACT_FROM, env.CONTACT_TO, raw));
     } catch (error) {
       console.error("Sending the enquiry failed", error);
-      return reply({ ok: false, error: "send_failed" }, 502, cors);
+      return reply({ ok: false, error: "send_failed" }, 502);
     }
 
-    return reply({ ok: true }, 200, cors);
+    return reply({ ok: true }, 200);
   },
 };
 
@@ -207,13 +187,7 @@ function multiLine(value) {
     .trim();
 }
 
-function corsHeaders(origin, allowedOrigins) {
-  const headers = { Vary: "Origin" };
-  if (origin && allowedOrigins.includes(origin)) headers["Access-Control-Allow-Origin"] = origin;
-  return headers;
-}
-
-function reply(data, status, headers) {
+function reply(data, status, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {

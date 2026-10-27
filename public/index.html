@@ -511,8 +511,8 @@
           </p>
         </div>
 
-        <!-- With JavaScript the form is sent to the contact Worker (workers/contact); without it, it opens the visitor's email app. -->
-        <form class="contact-form reveal" id="contact-form" action="mailto:shorttlegacygroup@gmail.com" method="post" enctype="text/plain" data-endpoint="https://api.shorttlegacygroup.com/contact">
+        <!-- With JavaScript the form is sent to /api/contact (worker/index.js); without it, it opens the visitor's email app. -->
+        <form class="contact-form reveal" id="contact-form" action="mailto:shorttlegacygroup@gmail.com" method="post" enctype="text/plain" data-endpoint="/api/contact">
           <h3 class="contact-form__title">Send us a message</h3>
 
           <div class="field">

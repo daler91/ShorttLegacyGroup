@@ -2,7 +2,7 @@
 
 The website for **Shortt Legacy Group OPC**, an IT consulting and technology solutions company in Arakkonam, Tamil Nadu. Its tagline is *Building a Smarter Tomorrow*. It is live at **https://shorttlegacygroup.com/**.
 
-It is a single-page static site built with plain HTML, CSS and JavaScript, hosted on Cloudflare Pages. There is no build step. One small Cloudflare Worker handles the contact form.
+It is a single-page static site built with plain HTML, CSS and JavaScript. There is no build step. It is hosted on Cloudflare Workers as static files, and a small script in the same Worker handles the contact form.
 
 ## What's on the page
 
@@ -18,14 +18,21 @@ A floating WhatsApp button sits in the bottom corner of every screen. The colour
 
 ## Preview it on your computer
 
-Open `public/index.html` in a browser, or run a small local server:
+For a quick look, open `public/index.html` in a browser, or run:
 
 ```bash
 python3 -m http.server 8000 --directory public
 # then visit http://localhost:8000
 ```
 
-When the page isn't served from shorttlegacygroup.com, the contact form can't reach the Worker, so it shows its "email or WhatsApp us instead" message. That is expected.
+That serves only the static files, so the contact form shows its "email or WhatsApp us instead" message.
+
+To run the whole site, contact form included, use Cloudflare's dev server:
+
+1. Create a file named `.dev.vars` containing `CONTACT_TO="you@example.com"`.
+2. Run `npx wrangler dev`.
+
+Emails aren't really sent in this mode: Wrangler saves each one as a file under `.wrangler/tmp`.
 
 ## Files
 
@@ -33,17 +40,18 @@ When the page isn't served from shorttlegacygroup.com, the contact form can't re
 public/                    Everything that gets published
   index.html               The page: all text and structure
   404.html                 "Page not found" page
-  _headers                 Security and caching headers for Cloudflare Pages
+  _headers                 Security and caching headers
   robots.txt, sitemap.xml  For search engines
   assets/css/styles.css    Colours, fonts and layout (brand colours are at the top)
   assets/js/main.js        Mobile menu, scroll effects and the contact form
   assets/fonts/            Self-hosted fonts and their licence
   assets/img/              Logo (colour and white), icons and the social-share image
   favicon.ico, site.webmanifest
-workers/contact/           Cloudflare Worker that emails contact form messages
+worker/index.js            Handles the contact form (POST /api/contact)
+wrangler.jsonc             Cloudflare settings for the Worker
 ```
 
-Only the `public/` folder is published, so notes or files you keep at the top level of the repository won't appear on the website.
+Only the `public/` folder is published as the website, so notes or files you keep at the top level of the repository won't appear on it.
 
 ## Editing content
 
@@ -61,55 +69,47 @@ Only the `public/` folder is published, so notes or files you keep at the top le
   ```bash
   python3 -c "import re,hashlib,base64;s=re.search(r'<script>(.*?)</script>',open('public/index.html',encoding='utf-8').read(),re.S).group(1);print(\"'sha256-\"+base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()+\"'\")"
   ```
-- **Security headers**: `public/_headers` limits what the browser may load to this site's own files, the contact Worker and Cloudflare Web Analytics. If you later add something from another website (a map, a video, a chat widget), or turn on a Cloudflare feature that adds scripts to the page, allow its address there. Otherwise the browser will block it.
+- **Security headers**: `public/_headers` limits what the browser may load to this site's own files and Cloudflare Web Analytics. If you later add something from another website (a map, a video, a chat widget), or turn on a Cloudflare feature that adds scripts to the page, allow its address there. Otherwise the browser will block it.
 
 ## How the contact form works
 
 1. The visitor fills in the form and clicks **Send message**.
-2. The page sends the message to the Worker at `https://api.shorttlegacygroup.com/contact`.
-3. The Worker checks the message and emails it to the company inbox through Cloudflare Email Routing. Email Routing is free when it sends to a verified address.
+2. The page sends the message to `/api/contact` on the same site, which `worker/index.js` handles.
+3. The script checks the message and emails it to the company inbox through Cloudflare Email Routing. Email Routing is free when it sends to a verified address.
 4. The email's reply-to is set to the visitor's address, so clicking **Reply** answers them directly.
 
 The Worker also guards against abuse:
-- It only accepts messages sent from shorttlegacygroup.com.
+- It only accepts messages sent from the site's own pages.
 - It silently drops typical bot submissions: ones that fill in a hidden field, or that are sent within two seconds of the page loading.
 - It can only deliver to addresses verified in Email Routing, so it can't be used to send email to anyone else.
 
-If the Worker can't be reached, the form doesn't lose the message. It offers to send it with the visitor's own email app or on WhatsApp instead. Without JavaScript, the form opens the visitor's email app. **Send on WhatsApp** opens WhatsApp with the message already written.
+If the message can't be sent, the form doesn't lose it. It offers to send it with the visitor's own email app or on WhatsApp instead. Without JavaScript, the form opens the visitor's email app. **Send on WhatsApp** opens WhatsApp with the message already written.
 
 The inbox that receives enquiries is kept in a Cloudflare secret (`CONTACT_TO`), not in this public repository.
 
-## Hosting on Cloudflare Pages
+## Hosting on Cloudflare Workers
 
-The Pages project is connected to this repository with these settings:
+The Cloudflare Worker `shorttlegacygroup` is connected to this repository through Workers Builds. `wrangler.jsonc` holds its settings:
+- serve the files in `public/`
+- show `404.html` for pages that don't exist
+- send only `/api/*` requests to the script
 
-| Setting | Value |
-| --- | --- |
-| Production branch | `main` |
-| Framework preset | None |
-| Build command | *(empty)* |
-| Build output directory | `public` |
+Every change merged into `main` goes live automatically. Other branches get a preview version, which Cloudflare reports on pull requests.
 
-Every change merged into `main` goes live automatically. The custom domain `shorttlegacygroup.com` is added under the Pages project's **Custom domains** tab. If `www.shorttlegacygroup.com` is also added there, both work, and the page tells search engines that the main address is `https://shorttlegacygroup.com/`.
+The custom domain `shorttlegacygroup.com` is attached under the Worker's **Settings → Domains & Routes**. If `www.shorttlegacygroup.com` is attached too, both work, and the page tells search engines that the main address is `https://shorttlegacygroup.com/`.
 
 ## Setting up the contact form (one time)
 
-**1. Turn on Email Routing**
+**1. Turn on Email Routing.** Do this before the first deploy that includes the contact form, because the Worker's email binding needs it.
 1. In the Cloudflare dashboard, open `shorttlegacygroup.com`, then **Email → Email Routing**, and follow the steps to enable it. This adds the DNS records it needs.
 2. Under **Destination addresses**, add the inbox that should receive enquiries. Cloudflare emails that inbox a link: open it to verify the address.
 3. Optional: create a custom address such as `hello@shorttlegacygroup.com` that forwards to the same inbox, so you have a free branded address.
 
-**2. Create the Worker**
-1. Go to **Workers & Pages → Create → Import a repository** and pick this repository.
-2. Name the Worker `shortt-contact`. It must match `name` in `workers/contact/wrangler.jsonc`.
-3. Set the root directory to `workers/contact`. Keep the deploy command `npx wrangler deploy`.
-4. Deploy. The first deploy also creates the `api.shorttlegacygroup.com` address for the Worker. If it doesn't appear under the Worker's **Settings → Domains & Routes**, add it there as a custom domain.
+**2. Tell the Worker where to send enquiries.**
+1. Open **Workers & Pages → shorttlegacygroup → Settings → Variables and Secrets**.
+2. Add a **Secret** named `CONTACT_TO`, set to the inbox you verified in step 1, and save.
 
-**3. Tell the Worker where to send enquiries**
-1. In the Worker, open **Settings → Variables and Secrets** and add a **Secret** named `CONTACT_TO`. Its value is the inbox you verified in step 1.
-2. Save. The Worker picks up the secret straight away.
-
-**4. Test it**: send a message from the website. The first email can land in spam; if it does, mark it **Not spam** so later ones arrive in the inbox.
+**3. Test it.** Send a message from the website. The first email can land in spam; if it does, mark it **Not spam** so later ones arrive in the inbox.
 
 To change where enquiries go later, verify the new address in Email Routing, then update the `CONTACT_TO` secret. If something isn't working, the Worker's **Logs** tab in the Cloudflare dashboard shows each request and any errors.
 
@@ -118,7 +118,7 @@ To change where enquiries go later, verify the new address in Email Routing, the
 - [ ] Read through the service descriptions and the About text. They are a first draft written from the banner, so adjust them to match exactly what you offer.
 - [ ] Add the site to [Google Search Console](https://search.google.com/search-console) and submit `https://shorttlegacygroup.com/sitemap.xml`.
 - [ ] Create a free [Google Business Profile](https://www.google.com/business/) for the Arakkonam address, so the company appears in Google Maps and local search.
-- [ ] Optional: turn on Cloudflare Web Analytics in the Pages project for free, cookie-free visitor statistics. The security headers already allow it.
+- [ ] Optional: turn on Cloudflare Web Analytics for free, cookie-free visitor statistics. The security headers already allow it.
 
 ## Credits
 
