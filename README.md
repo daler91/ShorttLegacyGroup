@@ -1,8 +1,8 @@
 # Shortt Legacy Group OPC – website
 
-The website for **Shortt Legacy Group OPC**, an IT consulting and technology solutions company in Arakkonam, Tamil Nadu. Its tagline is *Building a Smarter Tomorrow*.
+The website for **Shortt Legacy Group OPC**, an IT consulting and technology solutions company in Arakkonam, Tamil Nadu. Its tagline is *Building a Smarter Tomorrow*. It is live at **https://shorttlegacygroup.com/**.
 
-It is a single-page static site built with plain HTML, CSS and JavaScript. There is no build step and nothing to install. It is set up to be hosted on [Railway](https://railway.com).
+It is a single-page static site built with plain HTML, CSS and JavaScript, hosted on Cloudflare Pages. There is no build step. One small Cloudflare Worker handles the contact form.
 
 ## What's on the page
 
@@ -14,7 +14,7 @@ It is a single-page static site built with plain HTML, CSS and JavaScript. There
 | How we work | A four-step process: Listen → Plan → Build → Support |
 | Contact | Phone, email, address with directions, and a message form |
 
-The colours, logo and service icons follow the company banner: navy and gold, with one accent colour per service.
+A floating WhatsApp button sits in the bottom corner of every screen. The colours, logo and service icons follow the company banner: navy and gold, with one accent colour per service.
 
 ## Preview it on your computer
 
@@ -25,58 +25,105 @@ python3 -m http.server 8000 --directory public
 # then visit http://localhost:8000
 ```
 
+When the page isn't served from shorttlegacygroup.com, the contact form can't reach the Worker, so it shows its "email or WhatsApp us instead" message. That is expected.
+
 ## Files
 
 ```
 public/                    Everything that gets published
   index.html               The page: all text and structure
   404.html                 "Page not found" page
+  _headers                 Security and caching headers for Cloudflare Pages
+  robots.txt, sitemap.xml  For search engines
   assets/css/styles.css    Colours, fonts and layout (brand colours are at the top)
   assets/js/main.js        Mobile menu, scroll effects and the contact form
+  assets/fonts/            Self-hosted fonts and their licence
   assets/img/              Logo (colour and white), icons and the social-share image
   favicon.ico, site.webmanifest
-railway.json               Railway deploy settings
+workers/contact/           Cloudflare Worker that emails contact form messages
 ```
 
-Only the `public/` folder is served, so notes or files you keep at the top level of the repository won't appear on the website.
+Only the `public/` folder is published, so notes or files you keep at the top level of the repository won't appear on the website.
 
 ## Editing content
 
 - **Text**: all wording is in `public/index.html`. Search for the sentence you want to change.
-- **Phone, email or address**: these appear in several places in `public/index.html` (the top bar, hero, call-to-action band, contact section, footer and the structured data near the top). The form also uses them, via `CONTACT_EMAIL` and `WHATSAPP_NUMBER` at the top of `public/assets/js/main.js`. Change every copy.
+- **Phone, email or address**: these appear in several places in `public/index.html`:
+  - the top bar, hero, call-to-action band, contact section and footer
+  - the structured data near the top
+  - the floating WhatsApp button at the bottom (`wa.me/919442715232`)
+
+  The form also uses them, via `CONTACT_EMAIL` and `WHATSAPP_NUMBER` at the top of `public/assets/js/main.js`. Change every copy.
 - **Colours**: edit the variables at the top of `public/assets/css/styles.css`, for example `--navy` and `--gold`.
-- **Logo**: `public/assets/img/logo.png` and `logo-white.png` were cut out of the banner image. If you have the original logo file (SVG or a high-resolution PNG with a transparent background), save it over these two files to get sharper edges.
+- **Logo**: `public/assets/img/logo.png`, `logo-320.png` (a smaller copy for the header) and `logo-white.png` were cut out of the banner image. If you have the original logo file (SVG or a high-resolution PNG with a transparent background), replace all three for sharper edges.
+- **The inline script in `index.html`**: the small `<script>` in the page's `<head>` is allowed by its sha256 hash in `public/_headers`. If you change it, recompute the hash and update `_headers`:
+
+  ```bash
+  python3 -c "import re,hashlib,base64;s=re.search(r'<script>(.*?)</script>',open('public/index.html',encoding='utf-8').read(),re.S).group(1);print(\"'sha256-\"+base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()+\"'\")"
+  ```
+- **Security headers**: `public/_headers` limits what the browser may load to this site's own files, the contact Worker and Cloudflare Web Analytics. If you later add something from another website (a map, a video, a chat widget), or turn on a Cloudflare feature that adds scripts to the page, allow its address there. Otherwise the browser will block it.
 
 ## How the contact form works
 
-The site has no server-side code, so the form doesn't store anything. When a visitor clicks:
+1. The visitor fills in the form and clicks **Send message**.
+2. The page sends the message to the Worker at `https://api.shorttlegacygroup.com/contact`.
+3. The Worker checks the message and emails it to the company inbox through Cloudflare Email Routing. Email Routing is free when it sends to a verified address.
+4. The email's reply-to is set to the visitor's address, so clicking **Reply** answers them directly.
 
-- **Send by email**, their email app opens with the message already written, addressed to shorttlegacygroup@gmail.com.
-- **Send on WhatsApp**, WhatsApp opens with the message ready to send to +91 94427 15232.
+The Worker also guards against abuse:
+- It only accepts messages sent from shorttlegacygroup.com.
+- It silently drops typical bot submissions: ones that fill in a hidden field, or that are sent within two seconds of the page loading.
+- It can only deliver to addresses verified in Email Routing, so it can't be used to send email to anyone else.
 
-If you would rather receive enquiries without the visitor's email app opening, you can connect a form service such as Formspree or Web3Forms later.
+If the Worker can't be reached, the form doesn't lose the message. It offers to send it with the visitor's own email app or on WhatsApp instead. Without JavaScript, the form opens the visitor's email app. **Send on WhatsApp** opens WhatsApp with the message already written.
 
-## Hosting on Railway
+The inbox that receives enquiries is kept in a Cloudflare secret (`CONTACT_TO`), not in this public repository.
 
-Railway's builder (Railpack) recognises the `public/` folder as a static site and serves it with the Caddy web server, so no build or start command is needed. `railway.json` pins that builder and adds a health check, so each new version only goes live once it responds.
+## Hosting on Cloudflare Pages
 
-1. Merge the pull request into `main`.
-2. In Railway, choose **New Project → Deploy from GitHub repo** and pick this repository. Authorise Railway's GitHub app if it asks.
-3. When the first deploy finishes, open the service and go to **Settings → Networking**. Click **Generate Domain** to get a free `…up.railway.app` address.
-4. **Custom domain** (for example `shorttlegacygroup.com`): in the same Networking section, add the domain, then create the DNS records Railway shows (usually a CNAME) at your domain registrar. Railway sets up HTTPS automatically.
+The Pages project is connected to this repository with these settings:
 
-After that, every change merged into `main` redeploys the site automatically.
+| Setting | Value |
+| --- | --- |
+| Production branch | `main` |
+| Framework preset | None |
+| Build command | *(empty)* |
+| Build output directory | `public` |
 
-Because the site is plain files, the `public/` folder can also be published on any other static host (Netlify, Cloudflare Pages, GitHub Pages and so on).
+Every change merged into `main` goes live automatically. The custom domain `shorttlegacygroup.com` is added under the Pages project's **Custom domains** tab. If `www.shorttlegacygroup.com` is also added there, both work, and the page tells search engines that the main address is `https://shorttlegacygroup.com/`.
 
-## Before going live
+## Setting up the contact form (one time)
+
+**1. Turn on Email Routing**
+1. In the Cloudflare dashboard, open `shorttlegacygroup.com`, then **Email → Email Routing**, and follow the steps to enable it. This adds the DNS records it needs.
+2. Under **Destination addresses**, add the inbox that should receive enquiries. Cloudflare emails that inbox a link: open it to verify the address.
+3. Optional: create a custom address such as `hello@shorttlegacygroup.com` that forwards to the same inbox, so you have a free branded address.
+
+**2. Create the Worker**
+1. Go to **Workers & Pages → Create → Import a repository** and pick this repository.
+2. Name the Worker `shortt-contact`. It must match `name` in `workers/contact/wrangler.jsonc`.
+3. Set the root directory to `workers/contact`. Keep the deploy command `npx wrangler deploy`.
+4. Deploy. The first deploy also creates the `api.shorttlegacygroup.com` address for the Worker. If it doesn't appear under the Worker's **Settings → Domains & Routes**, add it there as a custom domain.
+
+**3. Tell the Worker where to send enquiries**
+1. In the Worker, open **Settings → Variables and Secrets** and add a **Secret** named `CONTACT_TO`. Its value is the inbox you verified in step 1.
+2. Save. The Worker picks up the secret straight away.
+
+**4. Test it**: send a message from the website. The first email can land in spam; if it does, mark it **Not spam** so later ones arrive in the inbox.
+
+To change where enquiries go later, verify the new address in Email Routing, then update the `CONTACT_TO` secret. If something isn't working, the Worker's **Logs** tab in the Cloudflare dashboard shows each request and any errors.
+
+## Next steps
 
 - [ ] Read through the service descriptions and the About text. They are a first draft written from the banner, so adjust them to match exactly what you offer.
-- [ ] Confirm that +91 94427 15232 is on WhatsApp. If it isn't, remove the "Send on WhatsApp" button from `public/index.html`.
-- [ ] Once the site has its final address (the Railway domain or your custom domain), change `og:image` in `public/index.html` to the full address, for example `https://shorttlegacygroup.com/assets/img/og-image.jpg`. This makes WhatsApp, Facebook and LinkedIn show the preview image when the link is shared. Add a `<link rel="canonical">` tag and a `"url"` entry in the structured data at the same time.
-- [ ] Optional: create a free Google Business Profile for the Arakkonam address so the company appears in Google Maps and local search.
+- [ ] Add the site to [Google Search Console](https://search.google.com/search-console) and submit `https://shorttlegacygroup.com/sitemap.xml`.
+- [ ] Create a free [Google Business Profile](https://www.google.com/business/) for the Arakkonam address, so the company appears in Google Maps and local search.
+- [ ] Optional: turn on Cloudflare Web Analytics in the Pages project for free, cookie-free visitor statistics. The security headers already allow it.
 
 ## Credits
 
-- Fonts: [Montserrat](https://fonts.google.com/specimen/Montserrat), [Inter](https://fonts.google.com/specimen/Inter) and [Kaushan Script](https://fonts.google.com/specimen/Kaushan+Script), from Google Fonts under the SIL Open Font License.
-- Icons: adapted from [Lucide](https://lucide.dev) (ISC licence). The WhatsApp icon is from [Simple Icons](https://simpleicons.org) (CC0).
+- **Fonts**: [Inter](https://rsms.me/inter/), [Montserrat](https://github.com/JulietaUla/Montserrat) and [Kaushan Script](https://fonts.google.com/specimen/Kaushan+Script), under the SIL Open Font License. They are hosted with the site.
+  - Inter and Montserrat are trimmed to Latin characters and the weights the site uses.
+  - Kaushan Script is used unmodified.
+  - See `public/assets/fonts/LICENSE.txt`.
+- **Icons**: adapted from [Lucide](https://lucide.dev) (ISC licence). The WhatsApp icon is from [Simple Icons](https://simpleicons.org) (CC0).

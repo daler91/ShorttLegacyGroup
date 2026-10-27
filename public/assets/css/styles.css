@@ -3,6 +3,40 @@
    Brand colours are sampled from the company banner.
    ========================================================================== */
 
+/* ---------- Fonts (self-hosted Latin subsets; licences in assets/fonts/LICENSE.txt) ---------- */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/inter-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 600 900;
+  font-display: swap;
+  src: url("../fonts/montserrat-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url("../fonts/montserrat-black-italic-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Kaushan Script";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/kaushan-script-latin.woff2") format("woff2");
+}
+
 :root {
   /* Brand */
   --navy: #053267;
@@ -1302,6 +1336,26 @@ a.pill:hover {
   margin-top: 0.4rem;
 }
 
+.field-hint {
+  margin: -0.5rem 0 1.1rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+/* Spam trap: hidden from people, filled in by bots. */
+.hp-field {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.btn[aria-busy="true"] {
+  opacity: 0.75;
+  cursor: progress;
+}
+
 .form-note {
   margin: 1.1rem 0 0;
   font-size: 0.86rem;
@@ -1310,13 +1364,65 @@ a.pill:hover {
 
 .form-status {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: var(--green);
+  color: var(--ink);
 }
 
 .form-status:not(:empty) {
-  margin-top: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: var(--bg-soft);
+}
+
+.form-status[data-state="success"] {
+  background: #e6f4ef;
+  color: #00573f;
+}
+
+.form-status[data-state="error"] {
+  background: #fdecee;
+  color: #9b1230;
+}
+
+.form-status a {
+  color: inherit;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Floating WhatsApp button ---------- */
+
+.wa-float {
+  position: fixed;
+  right: max(1.1rem, env(safe-area-inset-right));
+  bottom: max(1.1rem, env(safe-area-inset-bottom));
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 14px 28px -10px rgba(0, 64, 48, 0.65);
+  color: #fff;
+  transition: background-color 0.2s, translate 0.2s var(--ease);
+}
+
+.wa-float:hover {
+  background: #006a50;
+  translate: 0 -3px;
+}
+
+.wa-float:focus-visible {
+  outline-color: var(--navy);
+  border-radius: 50%;
+}
+
+.wa-float .icon {
+  width: 30px;
+  height: 30px;
 }
 
 /* ---------- Footer ---------- */
@@ -1772,6 +1878,11 @@ a.pill:hover {
 
   .footer__lockup {
     font-size: 1.45rem;
+  }
+
+  /* Keep the last lines of the footer clear of the floating WhatsApp button. */
+  .footer__bottom-inner {
+    padding-right: 4.5rem;
   }
 }
 

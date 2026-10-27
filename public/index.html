@@ -6,15 +6,18 @@
   <title>Shortt Legacy Group OPC | IT Consulting &amp; Technology Solutions, Arakkonam</title>
   <meta name="description" content="Shortt Legacy Group OPC provides cloud solutions, data &amp; analytics, application development, IT consulting and innovation services from Arakkonam, Tamil Nadu. Building a smarter tomorrow.">
   <meta name="theme-color" content="#053267">
+  <link rel="canonical" href="https://shorttlegacygroup.com/">
 
-  <!-- Social sharing. Once the site has a domain, change og:image to a full URL (https://…/assets/img/og-image.jpg). -->
+  <!-- Social sharing (WhatsApp, Facebook, LinkedIn need full URLs) -->
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shorttlegacygroup.com/">
   <meta property="og:site_name" content="Shortt Legacy Group OPC">
   <meta property="og:title" content="Shortt Legacy Group OPC – Building a Smarter Tomorrow">
   <meta property="og:description" content="IT consulting and technology solutions: cloud, data &amp; analytics, application development, IT consulting and innovation.">
-  <meta property="og:image" content="assets/img/og-image.jpg">
+  <meta property="og:image" content="https://shorttlegacygroup.com/assets/img/og-image.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Shortt Legacy Group – Building a Smarter Tomorrow">
   <meta property="og:locale" content="en_IN">
   <meta name="twitter:card" content="summary_large_image">
 
@@ -23,11 +26,14 @@
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
   <link rel="manifest" href="site.webmanifest">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Kaushan+Script&amp;family=Montserrat:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&amp;display=swap">
+  <!-- Fonts are served with the site; preloading lets them download alongside the stylesheet. -->
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/montserrat-black-italic-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/kaushan-script-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/css/styles.css">
 
+  <!-- The Content-Security-Policy in _headers allows this script by its sha256 hash: if you edit it, update the hash (see README). -->
   <script>
     document.documentElement.classList.add('js');
     // If main.js never runs (blocked or failed to load), fall back to the no-JS layout.
@@ -40,6 +46,9 @@
     "@context": "https://schema.org",
     "@type": "ProfessionalService",
     "name": "Shortt Legacy Group OPC",
+    "url": "https://shorttlegacygroup.com/",
+    "logo": "https://shorttlegacygroup.com/assets/img/logo.png",
+    "image": "https://shorttlegacygroup.com/assets/img/og-image.jpg",
     "slogan": "Building a Smarter Tomorrow",
     "description": "IT consulting and technology solutions: cloud solutions, data & analytics, application development, IT consulting and innovation.",
     "telephone": "+91 94427 15232",
@@ -96,7 +105,7 @@
   <header class="site-header">
     <div class="container header__inner">
       <a class="brand" href="#home">
-        <img src="assets/img/logo.png" width="549" height="208" alt="Shortt Legacy Group – home">
+        <img src="assets/img/logo.png" srcset="assets/img/logo-320.png 320w, assets/img/logo.png 549w" sizes="(max-width: 960px) 122px, 159px" width="549" height="208" alt="Shortt Legacy Group – home">
       </a>
 
       <button class="nav-toggle" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="Open menu">
@@ -502,23 +511,25 @@
           </p>
         </div>
 
-        <form class="contact-form reveal" id="contact-form" action="mailto:shorttlegacygroup@gmail.com" method="post" enctype="text/plain">
+        <!-- With JavaScript the form is sent to the contact Worker (workers/contact); without it, it opens the visitor's email app. -->
+        <form class="contact-form reveal" id="contact-form" action="mailto:shorttlegacygroup@gmail.com" method="post" enctype="text/plain" data-endpoint="https://api.shorttlegacygroup.com/contact">
           <h3 class="contact-form__title">Send us a message</h3>
 
           <div class="field">
             <label for="cf-name">Your name <span class="req" aria-hidden="true">*</span></label>
-            <input id="cf-name" name="name" type="text" autocomplete="name" required>
+            <input id="cf-name" name="name" type="text" autocomplete="name" maxlength="100" required>
           </div>
           <div class="field-row">
             <div class="field">
               <label for="cf-phone">Phone</label>
-              <input id="cf-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel">
+              <input id="cf-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="40" aria-describedby="cf-reply-hint">
             </div>
             <div class="field">
               <label for="cf-email">Email</label>
-              <input id="cf-email" name="email" type="email" autocomplete="email">
+              <input id="cf-email" name="email" type="email" autocomplete="email" maxlength="254" aria-describedby="cf-reply-hint">
             </div>
           </div>
+          <p class="field-hint" id="cf-reply-hint">Add a phone number or an email address (or both) so we can reply.</p>
           <div class="field">
             <label for="cf-service">I’m interested in</label>
             <select id="cf-service" name="service">
@@ -532,14 +543,18 @@
           </div>
           <div class="field">
             <label for="cf-message">How can we help? <span class="req" aria-hidden="true">*</span></label>
-            <textarea id="cf-message" name="message" rows="5" required></textarea>
+            <textarea id="cf-message" name="message" rows="5" maxlength="5000" required></textarea>
+          </div>
+          <div class="hp-field" aria-hidden="true">
+            <label for="cf-hp">Leave this field empty</label>
+            <input id="cf-hp" name="hp_field" type="text" tabindex="-1" autocomplete="off">
           </div>
 
           <div class="form-actions">
-            <button class="btn btn--navy" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg>Send by email</button>
+            <button class="btn btn--navy" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span data-submit-label>Send message</span></button>
             <button class="btn btn--green" type="button" data-whatsapp hidden><svg class="icon icon--fill" aria-hidden="true"><use href="#i-whatsapp"/></svg>Send on WhatsApp</button>
           </div>
-          <p class="form-note">Sending opens your email app<span data-whatsapp-note hidden> or WhatsApp</span> with your message ready to go. Nothing is stored on this website.</p>
+          <p class="form-note">We only use your details to reply to your enquiry.</p>
           <p class="form-status" role="status" aria-live="polite"></p>
         </form>
       </div>
@@ -595,5 +610,9 @@
       </div>
     </div>
   </footer>
+
+  <a class="wa-float" href="https://wa.me/919442715232?text=Hello%20Shortt%20Legacy%20Group%2C%20I%E2%80%99d%20like%20to%20know%20more%20about%20your%20services." target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp (opens in a new tab)" title="Chat with us on WhatsApp">
+    <svg class="icon icon--fill" aria-hidden="true"><use href="#i-whatsapp"/></svg>
+  </a>
 </body>
 </html>
