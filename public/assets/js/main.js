@@ -15,7 +15,8 @@
     var onScroll = function () {
       header.classList.toggle('is-scrolled', window.scrollY > 8);
     };
-    onScroll();
+    // First check on the next frame: reading scrollY during start-up forces an early layout.
+    window.requestAnimationFrame(onScroll);
     window.addEventListener('scroll', onScroll, { passive: true });
   }
 
@@ -103,16 +104,19 @@
     });
   }
 
-  /* ---------- Contact form: compose an email or WhatsApp message ---------- */
+  /* ---------- Contact form: send to the contact Worker, falling back to email or WhatsApp ---------- */
   var form = document.getElementById('contact-form');
   if (form) {
+    var endpoint = form.getAttribute('data-endpoint');
     var status = form.querySelector('.form-status');
+    var submitButton = form.querySelector('button[type="submit"]');
+    var submitLabel = form.querySelector('[data-submit-label]');
     var whatsappButton = form.querySelector('[data-whatsapp]');
-    var whatsappNote = form.querySelector('[data-whatsapp-note]');
     var serviceSelect = form.querySelector('#cf-service');
+    var phoneInput = form.elements.phone;
+    var sending = false;
 
     if (whatsappButton) whatsappButton.hidden = false;
-    if (whatsappNote) whatsappNote.hidden = false;
 
     var field = function (name) {
       var input = form.elements[name];
@@ -127,29 +131,121 @@
       return lines.join('\n');
     };
 
-    var setStatus = function (message) {
-      if (status) status.textContent = message;
+    var emailLink = function () {
+      var subject = 'Website enquiry: ' + field('service') + ' – ' + field('name');
+      var body = 'Hello Shortt Legacy Group,\n\n' + field('message') + '\n\n—\n' + details();
+      return 'mailto:' + CONTACT_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
     };
+
+    var whatsappLink = function () {
+      var text = 'Hello Shortt Legacy Group,\n\n' + field('message') + '\n\n' + details();
+      return 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(text);
+    };
+
+    // Builds the message from text and links as DOM nodes, so nothing typed into the form is parsed as HTML.
+    var setStatus = function (state, parts) {
+      if (!status) return;
+      status.textContent = '';
+      if (state) status.setAttribute('data-state', state);
+      else status.removeAttribute('data-state');
+      parts.forEach(function (part) {
+        if (typeof part === 'string') {
+          status.appendChild(document.createTextNode(part));
+          return;
+        }
+        var link = document.createElement('a');
+        link.href = part.href;
+        link.textContent = part.text;
+        if (part.external) {
+          link.target = '_blank';
+          link.rel = 'noopener';
+        }
+        status.appendChild(link);
+      });
+    };
+
+    var setSending = function (on) {
+      sending = on;
+      if (!submitButton) return;
+      submitButton.disabled = on;
+      submitButton.setAttribute('aria-busy', String(on));
+      if (submitLabel) submitLabel.textContent = on ? 'Sending…' : 'Send message';
+    };
+
+    var showFallback = function () {
+      setStatus('error', [
+        'Sorry, we couldn’t send your message just now. Please ',
+        { href: emailLink(), text: 'send it by email' },
+        ' or ',
+        { href: whatsappLink(), text: 'on WhatsApp', external: true },
+        ' instead.'
+      ]);
+    };
+
+    // We can only reply if the visitor leaves a phone number or an email address.
+    var checkReplyDetails = function () {
+      var missing = !field('phone') && !field('email');
+      phoneInput.setCustomValidity(missing ? 'Please add a phone number or an email address so we can reply.' : '');
+    };
+    ['phone', 'email'].forEach(function (name) {
+      form.elements[name].addEventListener('input', function () {
+        phoneInput.setCustomValidity('');
+      });
+    });
 
     form.addEventListener('submit', function (event) {
       event.preventDefault();
+      if (sending) return;
+      checkReplyDetails();
       if (!form.reportValidity()) return;
 
-      var subject = 'Website enquiry: ' + field('service') + ' – ' + field('name');
-      var body = 'Hello Shortt Legacy Group,\n\n' + field('message') + '\n\n—\n' + details();
-      window.location.href = 'mailto:' + CONTACT_EMAIL +
-        '?subject=' + encodeURIComponent(subject) +
-        '&body=' + encodeURIComponent(body);
-      setStatus('Opening your email app… If nothing happens, email us at ' + CONTACT_EMAIL + '.');
+      if (!endpoint || !window.fetch || !window.FormData) {
+        window.location.href = emailLink();
+        return;
+      }
+
+      var data = new FormData(form);
+      // Time spent on the page; the Worker treats near-instant submissions as spam.
+      data.set('elapsed_ms', String(Math.round(window.performance ? performance.now() : 0)));
+
+      var controller = window.AbortController ? new AbortController() : null;
+      var timer = controller ? setTimeout(function () { controller.abort(); }, 15000) : null;
+
+      setSending(true);
+      setStatus(null, ['Sending your message…']);
+
+      fetch(endpoint, {
+        method: 'POST',
+        body: data,
+        headers: { Accept: 'application/json' },
+        signal: controller ? controller.signal : undefined
+      })
+        .then(function (response) {
+          return response.json().catch(function () { return {}; }).then(function (result) {
+            if (response.ok && result.ok) {
+              form.reset();
+              setStatus('success', ['Thank you! Your message has been sent – we’ll get back to you soon.']);
+            } else if (response.status === 400 && result.message) {
+              setStatus('error', [result.message]);
+            } else {
+              showFallback();
+            }
+          });
+        })
+        .catch(showFallback)
+        .then(function () {
+          if (timer) clearTimeout(timer);
+          setSending(false);
+        });
     });
 
     if (whatsappButton) {
       whatsappButton.addEventListener('click', function () {
+        phoneInput.setCustomValidity('');
         if (!form.reportValidity()) return;
 
-        var text = 'Hello Shortt Legacy Group,\n\n' + field('message') + '\n\n' + details();
-        window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
-        setStatus('Opening WhatsApp… If nothing happens, message us on +91 94427 15232.');
+        window.open(whatsappLink(), '_blank', 'noopener');
+        setStatus(null, ['Opening WhatsApp… If nothing happens, message us on +91 94427 15232.']);
       });
     }
 

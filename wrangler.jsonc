@@ -1,0 +1,37 @@
+// Cloudflare Workers configuration for shorttlegacygroup.com (setup steps are in the README).
+// The website is the static files in ./public, served directly. Requests that don't match a
+// file go to the script in worker/: it handles the contact form (/api/contact) and hands
+// everything else back to the site, which shows 404.html.
+// Kept compatible with Wrangler 3 and 4, since Workers Builds may use either.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shorttlegacygroup",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
+  },
+
+  // Email Routing binding. It can only deliver to addresses verified in Email Routing.
+  "send_email": [{ "name": "CONTACT_EMAIL" }],
+
+  // CONTACT_TO (the inbox that receives enquiries) is a secret set in the Cloudflare dashboard.
+  "vars": {
+    "CONTACT_FROM": "website@shorttlegacygroup.com"
+  },
+
+  // Preview versions of pull requests (built with `wrangler preview`) don't inherit vars or
+  // bindings, so they're repeated here. A preview can only send to verified addresses, and
+  // without its own CONTACT_TO secret its form falls back to email/WhatsApp.
+  "previews": {
+    "vars": {
+      "CONTACT_FROM": "website@shorttlegacygroup.com"
+    },
+    "send_email": [{ "name": "CONTACT_EMAIL" }]
+  },
+
+  "observability": { "enabled": true }
+}
