@@ -23,5 +23,15 @@
     "CONTACT_FROM": "website@shorttlegacygroup.com"
   },
 
+  // Preview versions of pull requests (built with `wrangler preview`) don't inherit vars or
+  // bindings, so they're repeated here. A preview can only send to verified addresses, and
+  // without its own CONTACT_TO secret its form falls back to email/WhatsApp.
+  "previews": {
+    "vars": {
+      "CONTACT_FROM": "website@shorttlegacygroup.com"
+    },
+    "send_email": [{ "name": "CONTACT_EMAIL" }]
+  },
+
   "observability": { "enabled": true }
 }

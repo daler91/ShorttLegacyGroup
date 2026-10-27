@@ -95,6 +95,8 @@ The Cloudflare Worker `shorttlegacygroup` is connected to this repository throug
 
 Every change merged into `main` goes live automatically. Other branches get a preview version, which Cloudflare reports on pull requests.
 
+Previews are built with `wrangler preview` and take their settings from the `previews` block in `wrangler.jsonc`. A preview doesn't see the live `CONTACT_TO` secret, so its contact form shows the email/WhatsApp fallback. That's expected.
+
 The custom domain `shorttlegacygroup.com` is attached under the Worker's **Settings → Domains & Routes**. If `www.shorttlegacygroup.com` is attached too, both work, and the page tells search engines that the main address is `https://shorttlegacygroup.com/`.
 
 ## Setting up the contact form (one time)
