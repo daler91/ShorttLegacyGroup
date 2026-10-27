@@ -9,7 +9,7 @@ It is a single-page static site built with plain HTML, CSS and JavaScript. There
 | Section | Contents |
 | --- | --- |
 | Hero | "Building a Smarter Tomorrow" headline, a short introduction, buttons, and quick links to phone and email |
-| Services | Cloud Solutions, Data & Analytics, Application Development, IT Consulting, Innovation & Solutions |
+| Services | IT Recruitment, Data & Analytics, Application Development, IT Consulting, Innovation & Solutions |
 | About | Who we are, the proprietor and the company's values |
 | How we work | A four-step process: Listen → Plan → Build → Support |
 | Contact | Phone, email, address with directions, and a message form |

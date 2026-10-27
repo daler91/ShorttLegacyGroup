@@ -11,7 +11,7 @@ import { EmailMessage } from "cloudflare:email";
 
 const SERVICES = [
   "General enquiry",
-  "Cloud Solutions",
+  "IT Recruitment",
   "Data & Analytics",
   "Application Development",
   "IT Consulting",

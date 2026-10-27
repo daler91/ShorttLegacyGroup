@@ -49,8 +49,8 @@
   --green-500: #008566;
 
   /* Service accents (banner icon colours) */
-  --cloud: #0170e0;
-  --cloud-2: #0a93f2;
+  --recruit: #0170e0;
+  --recruit-2: #0a93f2;
   --data: #f39200;
   --data-2: #fbc93a;
   --app: #13893f;
@@ -739,7 +739,7 @@ address {
   width: calc(100% - 3.5rem);
 }
 
-.service-card--cloud { --accent: var(--cloud); --accent-2: var(--cloud-2); }
+.service-card--recruit { --accent: var(--recruit); --accent-2: var(--recruit-2); }
 .service-card--data { --accent: var(--data); --accent-2: var(--data-2); }
 .service-card--app { --accent: var(--app); --accent-2: var(--app-2); }
 .service-card--itc { --accent: var(--itc); --accent-2: var(--itc-2); }
